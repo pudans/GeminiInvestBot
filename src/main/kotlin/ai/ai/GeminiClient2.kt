@@ -105,7 +105,7 @@ class GeminiClient2(
 
         if (funCalls != null && funCalls.isNotEmpty()) {
             val responses = funCalls.map { funCall ->
-                executors.first { it.declaration.name == it.name }.execute(funCall)
+                executors.first { it.name == funCall.name }.execute(funCall)
             }
 
             val newContents = listOf(

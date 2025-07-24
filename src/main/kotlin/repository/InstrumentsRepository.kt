@@ -10,4 +10,5 @@ interface InstrumentsRepository {
     suspend fun getCurrencies(): Result<List<Instrument>>
     suspend fun getFavorites(): Result<List<Instrument>>
     suspend fun getInstrumentByTicker(ticker: String, classCode: String): Result<Instrument>
+    suspend fun getInstrumentByName(name: String): Result<List<Instrument>>
 }

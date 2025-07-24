@@ -9,7 +9,7 @@ class TinkoffInvestApi(
 ) {
 
     private val api: InvestApi by lazy {
-        val prodKey = getSecret(SecretKey.TINKOFF_ACCOUNT_PRIVATE)
+        val prodKey = getSecret(SecretKey.TINKOFF_ACCOUNT_BOT_EXPERIMENT)
         InvestApi.create(prodKey)
     }
 

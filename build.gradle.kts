@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
-
 plugins {
     kotlin("jvm") version "2.1.21"
     kotlin("plugin.serialization") version "2.1.21"
@@ -45,9 +43,10 @@ dependencies {
     implementation("ai.koog:koog-agents:0.3.0")
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
 kotlin {
     jvmToolchain(19)
+}
+
+application {
+    mainClass.set("ru.pudans.investrobot.MainKt")
 }

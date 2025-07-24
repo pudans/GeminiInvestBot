@@ -28,6 +28,21 @@ class TinkoffInstrumentsRepository(
         }
     }
 
+    override suspend fun getInstrumentByName(name: String): Result<List<Instrument>> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                api.instrumentsService.findInstrumentSync(name)
+                    .map {
+                        Instrument(
+                            name = it.name,
+                            figi = it.figi,
+                            uid = it.uid,
+                            type = it.instrumentType
+                        )
+                    }
+            }
+        }
+
     override suspend fun getShares(): Result<List<Instrument>> = withContext(Dispatchers.IO) {
         runCatching {
             api.instrumentsService.allSharesSync

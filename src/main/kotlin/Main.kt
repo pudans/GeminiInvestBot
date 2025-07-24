@@ -14,7 +14,7 @@ fun main() {
 //        accountId = realAccountId,
 //        target = GeminiInvestRobotApp.TargetInstrument.Random
 //    )
-    GeminiInvestRobotApp2().invoke()
+    InvestRobotApp2().invoke()
 
 
 //    InvestRobotApp(realAccountId, "").invoke()
