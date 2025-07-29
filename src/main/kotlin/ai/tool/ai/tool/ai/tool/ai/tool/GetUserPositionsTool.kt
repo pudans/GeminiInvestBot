@@ -1,8 +1,8 @@
 package ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 import ru.pudans.investrobot.ai.GeminiToolExecutor
 import ru.pudans.investrobot.ai.models.Declaration
 import ru.pudans.investrobot.ai.models.FunctionCall
@@ -25,11 +25,17 @@ class GetUserPositionsTool(
 
     override suspend fun execute(args: FunctionCall): FunctionResponse {
         val account = accountRepository.getAccounts().getOrThrow().first()
-        val positions = portfolioRepository.getPositions(account.id).getOrThrow()
+        println("$name request: $account")
+
+        val response = portfolioRepository.getPositions(account.id).getOrThrow()
+        println("$name response: $response")
+
         return FunctionResponse(
             id = args.id,
             name = args.name,
-            response = Json.encodeToJsonElement(positions).jsonObject
+            response = JsonObject(
+                content = mapOf("result" to Json.encodeToJsonElement(response))
+            )
         )
     }
 }

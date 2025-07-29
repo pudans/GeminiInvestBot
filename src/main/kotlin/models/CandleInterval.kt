@@ -1,5 +1,8 @@
 package ru.pudans.investrobot.models
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 enum class CandleInterval {
     INTERVAL_1_MIN,
     INTERVAL_5_MIN,

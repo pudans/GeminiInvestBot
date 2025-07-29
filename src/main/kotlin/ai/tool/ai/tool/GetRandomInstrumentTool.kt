@@ -2,7 +2,6 @@ package ru.pudans.investrobot.ai.tool.ai.tool
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 import ru.pudans.investrobot.ai.GeminiToolExecutor
 import ru.pudans.investrobot.ai.models.Declaration
 import ru.pudans.investrobot.ai.models.FunctionCall
@@ -21,12 +20,16 @@ class GetRandomInstrumentTool(
     )
 
     override suspend fun execute(args: FunctionCall): FunctionResponse {
+        println("$name request")
+
         val shares = instrumentsRepository.getShares().getOrThrow()
         val share = shares.random()
+        println("$name response: $share")
+
         return FunctionResponse(
             id = args.id,
             name = args.name,
-            response = Json.encodeToJsonElement(share).jsonObject
+            response = Json.encodeToJsonElement(share)
         )
     }
 } 

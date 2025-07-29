@@ -6,7 +6,6 @@ fun main() {
 
     initKoin()
 
-    // Option 1: Use the new simplified Investment Analysis Agent
 //    InvestRobotApp2().invoke()
 
     // Option 2: Use the original Gemini-based approach
@@ -14,8 +13,7 @@ fun main() {
 //        accountId = realAccountId,
 //        target = GeminiInvestRobotApp.TargetInstrument.Random
 //    )
-    InvestRobotApp2().invoke()
 
 
-//    InvestRobotApp(realAccountId, "").invoke()
+    GeminiInvestRobotApp2().invoke()
 }

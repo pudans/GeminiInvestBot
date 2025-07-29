@@ -6,7 +6,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 import ru.pudans.investrobot.ai.GeminiToolExecutor
 import ru.pudans.investrobot.ai.models.Declaration
 import ru.pudans.investrobot.ai.models.FunctionCall
@@ -58,12 +57,18 @@ class GetInstrumentCandlesTool(
     )
 
     override suspend fun execute(args: FunctionCall): FunctionResponse {
-        val request = Json.decodeFromJsonElement<CandlesRequest>(JsonObject(args.args!!))
-        val candles = marketDataRepository.getCandles(request).getOrThrow()
+        val request = Json.decodeFromJsonElement<CandlesRequest>(args.args!!)
+        println("$name request: $request")
+
+        val response = marketDataRepository.getCandles(request).getOrThrow()
+        println("$name response: $response")
+
         return FunctionResponse(
             id = args.id,
             name = args.name,
-            response = Json.encodeToJsonElement(candles).jsonObject
+            response = JsonObject(
+                content = mapOf("result" to Json.encodeToJsonElement(response))
+            )
         )
     }
 }

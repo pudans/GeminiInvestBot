@@ -38,6 +38,7 @@ enum class Type(val value: String) {
     OBJECT("object"),
     STRING("string"),
     INTEGER("integer"),
+    NUMBER("number"),
     BOOLEAN("boolean"),
     ARRAY("array")
 }

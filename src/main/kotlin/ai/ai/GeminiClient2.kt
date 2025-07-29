@@ -13,15 +13,19 @@ import org.koin.core.component.get
 import ru.pudans.investrobot.GetSecretUseCase
 import ru.pudans.investrobot.SecretKey
 import ru.pudans.investrobot.ai.models.Content
+import ru.pudans.investrobot.ai.models.FunctionCallingConfig
 import ru.pudans.investrobot.ai.models.GeminiModel
 import ru.pudans.investrobot.ai.models.GenerationConfig
 import ru.pudans.investrobot.ai.models.Part
 import ru.pudans.investrobot.ai.models.Request
 import ru.pudans.investrobot.ai.models.Response
-import ru.pudans.investrobot.ai.models.SafetySettings
 import ru.pudans.investrobot.ai.models.Tool
+import ru.pudans.investrobot.ai.models.ToolConfig
 import ru.pudans.investrobot.ai.tool.ai.tool.GetRandomInstrumentTool
+import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetFavouriteInstrumentsTool
+import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetInstrumentByNameTool
 import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetTechAnalysisTool
+import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetUserPositionsTool
 
 class GeminiClient2(
     private val getSecret: GetSecretUseCase,
@@ -31,7 +35,10 @@ class GeminiClient2(
     val executors = listOf(
         get<GetRandomInstrumentTool>(),
         get<GetTechAnalysisTool>(),
-        get<GetInstrumentCandlesTool>()
+        get<GetInstrumentCandlesTool>(),
+        get<GetUserPositionsTool>(),
+        get<GetFavouriteInstrumentsTool>(),
+        get<GetInstrumentByNameTool>()
     )
 
     val contentCache = mutableListOf<Content>()
@@ -60,28 +67,34 @@ class GeminiClient2(
                     functionDeclarations = executors.map { it.declaration }
                 )
             ),
-            safetySettings = listOf(
-                SafetySettings(
-                    category = "HARM_CATEGORY_HATE_SPEECH",
-                    threshold = "BLOCK_NONE"
-                ),
-                SafetySettings(
-                    category = "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                    threshold = "BLOCK_NONE"
-                ),
-                SafetySettings(
-                    category = "HARM_CATEGORY_DANGEROUS_CONTENT",
-                    threshold = "BLOCK_NONE"
-                ),
-                SafetySettings(
-                    category = "HARM_CATEGORY_HARASSMENT",
-                    threshold = "BLOCK_NONE"
-                ),
-                SafetySettings(
-                    category = "HARM_CATEGORY_CIVIC_INTEGRITY",
-                    threshold = "BLOCK_NONE"
+            toolConfig = ToolConfig(
+                functionCallingConfig = FunctionCallingConfig(
+                    mode = "AUTO",
+//                    allowedFunctionNames = executors.map { it.name }
                 )
             )
+//            safetySettings = listOf(
+//                SafetySettings(
+//                    category = "HARM_CATEGORY_HATE_SPEECH",
+//                    threshold = "BLOCK_NONE"
+//                ),
+//                SafetySettings(
+//                    category = "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+//                    threshold = "BLOCK_NONE"
+//                ),
+//                SafetySettings(
+//                    category = "HARM_CATEGORY_DANGEROUS_CONTENT",
+//                    threshold = "BLOCK_NONE"
+//                ),
+//                SafetySettings(
+//                    category = "HARM_CATEGORY_HARASSMENT",
+//                    threshold = "BLOCK_NONE"
+//                ),
+//                SafetySettings(
+//                    category = "HARM_CATEGORY_CIVIC_INTEGRITY",
+//                    threshold = "BLOCK_NONE"
+//                )
+//            )
         )
         val response = httpClient.post(url) {
             contentType(ContentType.Application.Json)
@@ -101,8 +114,6 @@ class GeminiClient2(
 
         contentCache.add(content!!)
 
-        println("funCalls: $funCalls")
-
         if (funCalls != null && funCalls.isNotEmpty()) {
             val responses = funCalls.map { funCall ->
                 executors.first { it.name == funCall.name }.execute(funCall)
@@ -115,7 +126,7 @@ class GeminiClient2(
                             functionResponse = it
                         )
                     },
-                    role = "function"
+                    role = "user"
                 )
             )
 

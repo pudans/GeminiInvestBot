@@ -11,11 +11,21 @@ import ru.pudans.investrobot.ai.ai.GeminiClient2
 import ru.pudans.investrobot.ai.models.Content
 import ru.pudans.investrobot.ai.models.GeminiModel
 import ru.pudans.investrobot.ai.models.Part
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 class GeminiInvestRobotApp2(
 //    private val config: Config
 ) : KoinComponent {
+
+    val instructions = """
+        You are an investment buddy dedicated to helping users discover investment opportunities. 
+        You are equipped with various functions to perform financial data analysis. 
+        When a user inquires, you are responsible for selecting the most relevant technical indicators (e.g., RSI, MACD, Moving Averages) and analysis types. 
+        Do not hesitate to make multiple function calls to gather diverse insights and provide a comprehensive recommendation. 
+        All analyses must be conducted with awareness of the current date and prevailing market conditions.
+        Current date is ${Clock.System.now()}
+    """.trimIndent()
 
     private val geminiClient: GeminiClient2 by inject()
 
@@ -23,15 +33,17 @@ class GeminiInvestRobotApp2(
         launch(context = Dispatchers.Default) {
 
             val geminiInput =
-                "Get 2-3 random instruments and analyse them using provided functions. Share the results"
+//                "Get 1 random instrument, analyse it. Share the results of analyse. Provide your result as answer to question: Should I buy/sell or keep this instrument and why"
+//                "I have bought the share called PHOR. Do a tech analyse of this instrument and provide the recommendation sell/buy or keep it. "
+                "Get the list of my favourite shares. do a tech analyse of them and provide the recommendation sell/buy or keep it. "
 
             val answer = geminiClient.generateContent(
-                model = GeminiModel.FLASH_2_0,
+                model = GeminiModel.FLASH_2_5,
                 temperature = 0.0,
-//                systemInstruction = Content(
-//                    parts = listOf(Part(text = instructions)),
-//                    role = "user"
-//                ),
+                systemInstruction = Content(
+                    parts = listOf(Part(text = instructions)),
+                    role = "user"
+                ),
                 contents = listOf(
                     Content(
                         parts = listOf(Part(text = geminiInput)),

@@ -13,11 +13,11 @@ data class TechAnalysisRequest(
     val to: Long,
     val interval: IndicatorInterval,
     val typeOfPrice: TypeOfPrice,
-    val length: Int?,
-    val deviation: Double?,
-    val smoothingFastLength: Int?,
-    val smoothingSlowLength: Int?,
-    val smoothingSignal: Int?
+    val length: Int? = null,
+    val deviation: Double? = null,
+    val smoothingFastLength: Int? = null,
+    val smoothingSlowLength: Int? = null,
+    val smoothingSignal: Int? = null
 )
 
 @Serializable
@@ -39,6 +39,7 @@ enum class IndicatorType {
     INDICATOR_TYPE_SMA
 }
 
+@Serializable
 enum class IndicatorInterval {
     INDICATOR_INTERVAL_ONE_MINUTE,
     INDICATOR_INTERVAL_FIVE_MINUTES,
@@ -47,6 +48,7 @@ enum class IndicatorInterval {
     INDICATOR_INTERVAL_ONE_DAY
 }
 
+@Serializable
 enum class TypeOfPrice {
     TYPE_OF_PRICE_CLOSE,
     TYPE_OF_PRICE_OPEN,

@@ -126,6 +126,7 @@ class TinkoffInstrumentsRepository(
     override suspend fun getFavorites(): Result<List<Instrument>> = withContext(Dispatchers.IO) {
         runCatching {
             api.instrumentsService.favoritesSync
+                .filter { it.instrumentType == "share" }
                 .map { favorite ->
                     Instrument(
                         figi = favorite.figi,

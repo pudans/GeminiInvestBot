@@ -16,7 +16,10 @@ import ru.pudans.investrobot.ai.GeminiClient
 import ru.pudans.investrobot.ai.ai.GeminiClient2
 import ru.pudans.investrobot.ai.ai.GetInstrumentCandlesTool
 import ru.pudans.investrobot.ai.tool.ai.tool.GetRandomInstrumentTool
+import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetFavouriteInstrumentsTool
+import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetInstrumentByNameTool
 import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetTechAnalysisTool
+import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetUserPositionsTool
 import ru.pudans.investrobot.logger.InvestRobotLogger
 import ru.pudans.investrobot.repository.AccountRepository
 import ru.pudans.investrobot.repository.InstrumentsRepository
@@ -84,6 +87,9 @@ val aiModule = module {
     factoryOf(::GetTechAnalysisTool)
     factoryOf(::GetRandomInstrumentTool)
     factoryOf(::GetInstrumentCandlesTool)
+    factoryOf(::GetUserPositionsTool)
+    factoryOf(::GetInstrumentByNameTool)
+    factoryOf(::GetFavouriteInstrumentsTool)
 }
 
 val telegramModule = module {

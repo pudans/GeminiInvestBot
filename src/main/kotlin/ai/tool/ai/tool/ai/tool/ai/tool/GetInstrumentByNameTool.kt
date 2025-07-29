@@ -1,6 +1,7 @@
 package ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool // Assuming same package for now
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
 import ru.pudans.investrobot.ai.GeminiToolExecutor
@@ -34,12 +35,22 @@ class GetInstrumentByNameTool(
     )
 
     override suspend fun execute(args: FunctionCall): FunctionResponse {
-        val query = args.args!!["query"]?.toString() ?: error("Missing or invalid 'query' argument")
-        val instruments = instrumentsRepository.getInstrumentByName(query)
+        val query = args.args!!.jsonObject["query"]?.toString()
+            ?.toCharArray()
+            ?.filter { it.isLetterOrDigit() }
+            ?.joinToString(separator = "")
+            ?: error("Missing or invalid 'query' argument")
+        println("$name request: $query")
+
+        val response = instrumentsRepository.getInstrumentByName(query).getOrThrow()
+        println("$name response: $response")
+
         return FunctionResponse(
             id = args.id,
             name = args.name,
-            response = Json.encodeToJsonElement(instruments).jsonObject
+            response = JsonObject(
+                content = mapOf("result" to Json.encodeToJsonElement(response))
+            )
         )
     }
 }

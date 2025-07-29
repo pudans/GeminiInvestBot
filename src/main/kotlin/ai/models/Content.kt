@@ -34,12 +34,12 @@ data class FileData(
 data class FunctionCall(
     val id: String? = null,
     val name: String? = null,
-    val args: Map<String, JsonElement>? = null
+    val args: JsonElement? = null
 )
 
 @Serializable
 data class FunctionResponse(
     val id: String? = null,
     val name: String? = null,
-    val response: Map<String, JsonElement>? = null
+    val response: JsonElement? = null
 )

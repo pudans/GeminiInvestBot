@@ -1,8 +1,8 @@
 package ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool // Assuming same package
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 import ru.pudans.investrobot.ai.GeminiToolExecutor
 import ru.pudans.investrobot.ai.models.Declaration
 import ru.pudans.investrobot.ai.models.FunctionCall
@@ -22,11 +22,17 @@ class GetFavouriteInstrumentsTool(
     )
 
     override suspend fun execute(args: FunctionCall): FunctionResponse {
+        println("$name request")
+
         val instruments = instrumentsRepository.getFavorites().getOrThrow()
+        println("$name response: $instruments")
+
         return FunctionResponse(
             id = args.id,
             name = args.name,
-            response = Json.encodeToJsonElement(instruments).jsonObject
+            response = JsonObject(
+                content = mapOf("result" to Json.encodeToJsonElement(instruments))
+            )
         )
     }
 }

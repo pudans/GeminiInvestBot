@@ -4,7 +4,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
 import ru.pudans.investrobot.ai.GeminiToolExecutor
 import ru.pudans.investrobot.ai.models.Declaration
 import ru.pudans.investrobot.ai.models.FunctionCall
@@ -59,22 +58,22 @@ class GetTechAnalysisTool(
                 ),
                 "length" to Property(
                     type = Type.INTEGER,
-                    description = "Length parameter for the indicator (optional, depends on indicator type)"
+                    description = "Length parameter for the indicator (optional, required for INDICATOR_TYPE_RSI)"
                 ),
                 "deviation" to Property(
-                    type = Type.INTEGER,
+                    type = Type.NUMBER,
                     description = "Deviation parameter for Bollinger Bands (optional)"
                 ),
                 "smoothingFastLength" to Property(
-                    type = Type.INTEGER,
+                    type = Type.NUMBER,
                     description = "Fast smoothing length for MACD (optional)"
                 ),
                 "smoothingSlowLength" to Property(
-                    type = Type.INTEGER,
+                    type = Type.NUMBER,
                     description = "Slow smoothing length for MACD (optional)"
                 ),
                 "smoothingSignal" to Property(
-                    type = Type.INTEGER,
+                    type = Type.NUMBER,
                     description = "Signal smoothing parameter (optional)"
                 )
             ),
@@ -90,12 +89,18 @@ class GetTechAnalysisTool(
     )
 
     override suspend fun execute(args: FunctionCall): FunctionResponse {
-        val request = Json.decodeFromJsonElement<TechAnalysisRequest>(JsonObject(args.args!!))
-        val analysisResult = marketDataRepository.getTechAnalysis(request).getOrThrow()
+        val request = Json.decodeFromJsonElement<TechAnalysisRequest>(args.args!!)
+        println("$name request: $request")
+
+        val response = marketDataRepository.getTechAnalysis(request).getOrThrow()
+        println("$name response: $response")
+
         return FunctionResponse(
             id = args.id,
             name = args.name,
-            response = Json.encodeToJsonElement(analysisResult).jsonObject
+            response = JsonObject(
+                content = mapOf("result" to Json.encodeToJsonElement(response))
+            )
         )
     }
 }
