@@ -12,6 +12,7 @@ import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import ru.pudans.investrobot.ai.GeminiClient
 import ru.pudans.investrobot.ai.GeminiClient2
+import ru.pudans.investrobot.ai.GeminiClient3
 import ru.pudans.investrobot.ai.tool.*
 import ru.pudans.investrobot.logger.InvestRobotLogger
 import ru.pudans.investrobot.repository.*
@@ -65,6 +66,7 @@ val tinkoffModule = module {
 val aiModule = module {
     singleOf(::GeminiClient)
     singleOf(::GeminiClient2)
+    singleOf(::GeminiClient3)
 
     factoryOf(::GetTechAnalysisTool)
     factoryOf(::GetRandomInstrumentTool)
