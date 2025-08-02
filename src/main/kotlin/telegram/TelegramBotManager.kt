@@ -3,8 +3,8 @@ package ru.pudans.investrobot.telegram
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.entities.ChatId
 import com.github.kotlintelegrambot.logging.LogLevel
-import ru.pudans.investrobot.GetSecretUseCase
-import ru.pudans.investrobot.SecretKey
+import ru.pudans.investrobot.secrets.GetSecretUseCase
+import ru.pudans.investrobot.secrets.SecretKey
 
 class TelegramBotManager(
     private val getSecret: GetSecretUseCase

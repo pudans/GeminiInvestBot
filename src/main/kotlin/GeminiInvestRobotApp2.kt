@@ -7,7 +7,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import ru.pudans.investrobot.ai.ai.GeminiClient2
+import ru.pudans.investrobot.ai.GeminiClient2
 import ru.pudans.investrobot.ai.models.Content
 import ru.pudans.investrobot.ai.models.GeminiModel
 import ru.pudans.investrobot.ai.models.Part

@@ -38,9 +38,6 @@ dependencies {
 
     // Telegram Bot API
     implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.3.0")
-
-    // Koog
-    implementation("ai.koog:koog-agents:0.3.0")
 }
 
 kotlin {

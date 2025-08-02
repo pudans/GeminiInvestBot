@@ -1,4 +1,4 @@
-package ru.pudans.investrobot.ai.tool.ai.tool
+package ru.pudans.investrobot.ai.tool
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement

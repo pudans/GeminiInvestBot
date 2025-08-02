@@ -1,7 +1,7 @@
 package ru.pudans.investrobot.tinkoff.api
 
-import ru.pudans.investrobot.GetSecretUseCase
-import ru.pudans.investrobot.SecretKey
+import ru.pudans.investrobot.secrets.GetSecretUseCase
+import ru.pudans.investrobot.secrets.SecretKey
 import ru.tinkoff.piapi.core.InvestApi
 
 class TinkoffInvestApi(

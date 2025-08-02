@@ -1,6 +1,6 @@
-package ru.pudans.investrobot
+package ru.pudans.investrobot.secrets
 
-import java.util.Properties
+import java.util.*
 
 enum class SecretKey {
     GEMINI_API_KEY,

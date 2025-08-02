@@ -1,16 +1,11 @@
-package ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool
+package ru.pudans.investrobot.ai.tool
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
 import ru.pudans.investrobot.ai.GeminiToolExecutor
-import ru.pudans.investrobot.ai.models.Declaration
-import ru.pudans.investrobot.ai.models.FunctionCall
-import ru.pudans.investrobot.ai.models.FunctionResponse
-import ru.pudans.investrobot.ai.models.Parameters
-import ru.pudans.investrobot.ai.models.Property
-import ru.pudans.investrobot.ai.models.Type
+import ru.pudans.investrobot.ai.models.*
 import ru.pudans.investrobot.models.IndicatorInterval
 import ru.pudans.investrobot.models.IndicatorType
 import ru.pudans.investrobot.models.TechAnalysisRequest

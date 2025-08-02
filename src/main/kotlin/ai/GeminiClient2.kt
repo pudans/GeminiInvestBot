@@ -1,31 +1,16 @@
-package ru.pudans.investrobot.ai.ai
+package ru.pudans.investrobot.ai
 
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
-import ru.pudans.investrobot.GetSecretUseCase
-import ru.pudans.investrobot.SecretKey
-import ru.pudans.investrobot.ai.models.Content
-import ru.pudans.investrobot.ai.models.FunctionCallingConfig
-import ru.pudans.investrobot.ai.models.GeminiModel
-import ru.pudans.investrobot.ai.models.GenerationConfig
-import ru.pudans.investrobot.ai.models.Part
-import ru.pudans.investrobot.ai.models.Request
-import ru.pudans.investrobot.ai.models.Response
-import ru.pudans.investrobot.ai.models.Tool
-import ru.pudans.investrobot.ai.models.ToolConfig
-import ru.pudans.investrobot.ai.tool.ai.tool.GetRandomInstrumentTool
-import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetFavouriteInstrumentsTool
-import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetInstrumentByNameTool
-import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetTechAnalysisTool
-import ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool.GetUserPositionsTool
+import ru.pudans.investrobot.ai.models.*
+import ru.pudans.investrobot.ai.tool.*
+import ru.pudans.investrobot.secrets.GetSecretUseCase
+import ru.pudans.investrobot.secrets.SecretKey
 
 class GeminiClient2(
     private val getSecret: GetSecretUseCase,

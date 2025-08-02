@@ -1,4 +1,4 @@
-package ru.pudans.investrobot.ai.tool.ai.tool.ai.tool.ai.tool // Assuming same package
+package ru.pudans.investrobot.ai.tool
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
