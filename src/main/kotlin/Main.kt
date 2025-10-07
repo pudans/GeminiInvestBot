@@ -15,5 +15,5 @@ fun main() {
 //    )
 
 
-    GeminiInvestRobotApp3().invoke()
+    GeminiInvestRobotApp2().invoke()
 }

@@ -38,6 +38,9 @@ dependencies {
 
     // Telegram Bot API
     implementation("io.github.kotlin-telegram-bot.kotlin-telegram-bot:telegram:6.3.0")
+
+    // Ktorm
+    implementation("org.ktorm:ktorm-core:4.1.1")
 }
 
 kotlin {
