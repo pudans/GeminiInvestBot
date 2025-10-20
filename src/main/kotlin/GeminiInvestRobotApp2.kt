@@ -7,9 +7,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import ru.pudans.investrobot.ai.GeminiClient2
+import ru.pudans.investrobot.ai.GeminiClient3
 import ru.pudans.investrobot.ai.models.Content
-import ru.pudans.investrobot.ai.models.GeminiModel
 import ru.pudans.investrobot.ai.models.Part
 import kotlin.time.ExperimentalTime
 
@@ -28,7 +27,7 @@ class GeminiInvestRobotApp2(
         Insert your any helpful notes about instrument using functional call that can be useful in future iterations.
     """.trimIndent()
 
-    private val geminiClient: GeminiClient2 by inject()
+    private val geminiClient: GeminiClient3 by inject()
 
     operator fun invoke() = runBlocking {
         launch(context = Dispatchers.Default) {
@@ -38,8 +37,7 @@ class GeminiInvestRobotApp2(
 //                "I have bought the share called PHOR. Do a tech analyse of this instrument and provide the recommendation sell/buy or keep it. "
 //                "Get the list of my favourite shares. do a tech analyse of them and provide the recommendation sell/buy or keep it. "
 
-            val answer = geminiClient.generateContent(
-                model = GeminiModel.FLASH_2_5,
+            geminiClient.generateContent(
                 temperature = 0.0,
                 systemInstruction = Content(
                     parts = listOf(Part(text = instructions)),
@@ -50,10 +48,9 @@ class GeminiInvestRobotApp2(
                         parts = listOf(Part(text = geminiInput)),
                         role = "user"
                     )
-                )
-            ).getOrThrow().parts?.first()?.text
-
-            println(answer)
+                ),
+                onAnswers = { println(it) }
+            )
         }
     }
 }

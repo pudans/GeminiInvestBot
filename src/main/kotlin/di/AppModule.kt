@@ -1,9 +1,9 @@
 package ru.pudans.investrobot.di
 
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.java.Java
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.serialization.kotlinx.json.json
+import io.ktor.client.*
+import io.ktor.client.engine.java.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
@@ -11,33 +11,15 @@ import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 import ru.pudans.investrobot.ai.GeminiClient
-import ru.pudans.investrobot.ai.GeminiClient2
 import ru.pudans.investrobot.ai.GeminiClient3
-import ru.pudans.investrobot.ai.tool.GetFavouriteInstrumentsTool
-import ru.pudans.investrobot.ai.tool.GetInstrumentByNameTool
-import ru.pudans.investrobot.ai.tool.GetInstrumentCandlesTool
-import ru.pudans.investrobot.ai.tool.GetNoteTool
-import ru.pudans.investrobot.ai.tool.GetRandomInstrumentTool
-import ru.pudans.investrobot.ai.tool.GetTechAnalysisTool
-import ru.pudans.investrobot.ai.tool.GetUserPositionsTool
-import ru.pudans.investrobot.ai.tool.NewNoteTool
+import ru.pudans.investrobot.ai.GeminiToolManager
+import ru.pudans.investrobot.ai.tool.*
 import ru.pudans.investrobot.database.NotesRepository
 import ru.pudans.investrobot.logger.InvestRobotLogger
-import ru.pudans.investrobot.repository.AccountRepository
-import ru.pudans.investrobot.repository.InstrumentsRepository
-import ru.pudans.investrobot.repository.MarketDataRepository
-import ru.pudans.investrobot.repository.PortfolioRepository
-import ru.pudans.investrobot.repository.PostOrderRepository
-import ru.pudans.investrobot.repository.SignalRepository
+import ru.pudans.investrobot.repository.*
 import ru.pudans.investrobot.secrets.GetSecretUseCase
 import ru.pudans.investrobot.telegram.TelegramBotManager
-import ru.pudans.investrobot.tinkoff.TinkoffAccountRepository
-import ru.pudans.investrobot.tinkoff.TinkoffInstrumentsRepository
-import ru.pudans.investrobot.tinkoff.TinkoffMarketDataManager
-import ru.pudans.investrobot.tinkoff.TinkoffMarketDataRepository
-import ru.pudans.investrobot.tinkoff.TinkoffPortfolioRepository
-import ru.pudans.investrobot.tinkoff.TinkoffPostOrderRepository
-import ru.pudans.investrobot.tinkoff.TinkoffSignalRepository
+import ru.pudans.investrobot.tinkoff.*
 import ru.pudans.investrobot.tinkoff.api.TinkoffInvestApi
 
 fun initKoin(): KoinApplication =
@@ -85,7 +67,6 @@ val tinkoffModule = module {
 
 val aiModule = module {
     singleOf(::GeminiClient)
-    singleOf(::GeminiClient2)
     singleOf(::GeminiClient3)
 
     factoryOf(::GetTechAnalysisTool)
@@ -96,6 +77,7 @@ val aiModule = module {
     factoryOf(::GetFavouriteInstrumentsTool)
     factoryOf(::GetNoteTool)
     factoryOf(::NewNoteTool)
+    factoryOf(::GeminiToolManager)
 }
 
 val telegramModule = module {

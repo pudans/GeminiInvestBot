@@ -16,7 +16,6 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import ru.pudans.investrobot.ai.GeminiClient3
 import ru.pudans.investrobot.ai.models.Content
-import ru.pudans.investrobot.ai.models.GeminiModel
 import ru.pudans.investrobot.ai.models.Part
 import ru.pudans.investrobot.secrets.GetSecretUseCase
 import ru.pudans.investrobot.secrets.SecretKey
@@ -103,7 +102,6 @@ class GeminiInvestRobotApp3 : KoinComponent {
                         val request = message.text.orEmpty()
 
                         geminiClient.generateContent(
-                            model = GeminiModel.FLASH_2_5,
                             temperature = 0.2,
                             systemInstruction = Content(
                                 parts = listOf(Part(text = instructions)),
