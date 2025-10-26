@@ -2,6 +2,7 @@ package ru.pudans.investrobot.telegram
 
 import com.github.kotlintelegrambot.bot
 import com.github.kotlintelegrambot.entities.ChatId
+import com.github.kotlintelegrambot.entities.Message
 import com.github.kotlintelegrambot.logging.LogLevel
 import ru.pudans.investrobot.secrets.GetSecretUseCase
 import ru.pudans.investrobot.secrets.SecretKey
@@ -10,7 +11,11 @@ class TelegramBotManager(
     private val getSecret: GetSecretUseCase
 ) {
 
-    val bot by lazy {
+    private val ownerId by lazy {
+        getSecret(SecretKey.TELEGRAM_BOT_OWNER_ID).toLong()
+    }
+
+    private val bot by lazy {
         bot {
             token = getSecret(SecretKey.TELEGRAM_BOT_TOKEN)
             timeout = 30
@@ -18,12 +23,7 @@ class TelegramBotManager(
         }
     }
 
-    fun sendMessage(message: String): Any? {
-
-//        val me = bot.getMe().onError {
-//            println(it)
-//        }.getOrNull()
-//        println(me)
+    fun sendMessage(message: String): Message? {
 
         val message = message
 //            .replace("_", "\\_")
@@ -49,7 +49,7 @@ class TelegramBotManager(
 //            .replace(")", "\\)")
 
         return bot.sendMessage(
-            chatId = ChatId.fromId(id = getSecret(SecretKey.TELEGRAM_BOT_OWNER_ID).toLong()),
+            chatId = ChatId.fromId(id = ownerId),
             text = message,
 //            parseMode = ParseMode.MARKDOWN
         ).onError {

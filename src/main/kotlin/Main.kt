@@ -8,12 +8,13 @@ fun main() {
 
 //    InvestRobotApp2().invoke()
 
-    // Option 2: Use the original Gemini-based approach
+    // Option 1: Use the original Gemini-based approach
 //    val config = GeminiInvestRobotApp.Config(
 //        accountId = realAccountId,
 //        target = GeminiInvestRobotApp.TargetInstrument.Random
 //    )
+//    GeminiInvestRobotApp2().invoke()
 
-
-    GeminiInvestRobotApp2().invoke()
+    // Option 2: Use the new Signal-Based Trading approach (RECOMMENDED)
+    SignalBasedTradingApp().invoke()
 }
