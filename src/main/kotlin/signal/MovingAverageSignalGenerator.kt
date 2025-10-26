@@ -12,21 +12,33 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 
 /**
+ * Configuration for Moving Average Signal Generator
+ */
+data class MovingAverageConfig(
+    val fastPeriod: Int = 20,
+    val slowPeriod: Int = 50,
+    val trendPeriod: Int = 200,
+    val momentumThreshold: Double = 0.01,           // 1% momentum threshold
+    val trendDistanceThreshold: Double = 0.05,      // 5% distance from trend line
+    val priceNearEMAThreshold: Double = 0.02,       // 2% threshold for price near EMA
+    val stopLossPercent: Double = 0.02,             // 2% stop loss buffer
+    val targetMultiplier: Double = 1.03             // 3% target multiplier
+)
+
+/**
  * Signal generator based on Moving Average crossovers and price relationships
  * - Golden Cross: Fast MA crosses above Slow MA (bullish)
  * - Death Cross: Fast MA crosses below Slow MA (bearish)
  * - Price above/below MA indicates trend direction
  */
-class MovingAverageSignalGenerator : SignalGenerator, KoinComponent {
+class MovingAverageSignalGenerator(
+    private val config: MovingAverageConfig = MovingAverageConfig()
+) : SignalGenerator, KoinComponent {
 
     private val marketDataRepository: MarketDataRepository by inject()
 
     override val name: String = "MovingAverage"
     override val priority: Int = 2
-
-    private val fastPeriod = 20
-    private val slowPeriod = 50
-    private val trendPeriod = 200
 
     override suspend fun generateSignal(context: SignalContext): Result<GeneratedSignal> =
         runCatching { analyzeMovingAverages(context) }
@@ -34,8 +46,8 @@ class MovingAverageSignalGenerator : SignalGenerator, KoinComponent {
     private suspend fun analyzeMovingAverages(context: SignalContext): GeneratedSignal {
         // Check for sufficient data
         val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
-        if (hourlyCandles == null || hourlyCandles.size < trendPeriod + 5) {
-            error("Insufficient data for Moving Average analysis (need at least ${trendPeriod + 5} hourly candles)")
+        if (hourlyCandles == null || hourlyCandles.size < config.trendPeriod + 5) {
+            error("Insufficient data for Moving Average analysis (need at least ${config.trendPeriod + 5} hourly candles)")
         }
 
         // Get multiple EMA data
@@ -47,7 +59,7 @@ class MovingAverageSignalGenerator : SignalGenerator, KoinComponent {
                 to = Clock.System.now().epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
-                length = fastPeriod
+                length = config.fastPeriod
             )
         ).getOrThrow()
 
@@ -60,7 +72,7 @@ class MovingAverageSignalGenerator : SignalGenerator, KoinComponent {
                 to = Clock.System.now().epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
-                length = slowPeriod
+                length = config.slowPeriod
             )
         ).getOrThrow()
 
@@ -73,7 +85,7 @@ class MovingAverageSignalGenerator : SignalGenerator, KoinComponent {
                 to = Clock.System.now().epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
-                length = trendPeriod
+                length = config.trendPeriod
             )
         ).getOrThrow()
 
@@ -171,60 +183,60 @@ class MovingAverageSignalGenerator : SignalGenerator, KoinComponent {
             goldenCross && bullishAlignment -> Triple(
                 SignalResult.BUY,
                 SignalConfidence.VERY_HIGH,
-                "Golden Cross confirmed with full bullish alignment (EMA${fastPeriod} > EMA${slowPeriod} > EMA${trendPeriod})"
+                "Golden Cross confirmed with full bullish alignment (EMA${config.fastPeriod} > EMA${config.slowPeriod} > EMA${config.trendPeriod})"
             )
 
             goldenCross -> Triple(
                 SignalResult.BUY,
                 SignalConfidence.HIGH,
-                "Golden Cross: EMA${fastPeriod} crossed above EMA${slowPeriod}"
+                "Golden Cross: EMA${config.fastPeriod} crossed above EMA${config.slowPeriod}"
             )
 
             // Strong bearish signals  
             deathCross && bearishAlignment -> Triple(
                 SignalResult.SELL,
                 SignalConfidence.VERY_HIGH,
-                "Death Cross confirmed with full bearish alignment (EMA${fastPeriod} < EMA${slowPeriod} < EMA${trendPeriod})"
+                "Death Cross confirmed with full bearish alignment (EMA${config.fastPeriod} < EMA${config.slowPeriod} < EMA${config.trendPeriod})"
             )
 
             deathCross -> Triple(
                 SignalResult.SELL,
                 SignalConfidence.HIGH,
-                "Death Cross: EMA${fastPeriod} crossed below EMA${slowPeriod}"
+                "Death Cross: EMA${config.fastPeriod} crossed below EMA${config.slowPeriod}"
             )
 
             // Trend following signals
-            bullishAlignment && fastMomentum > 0.01 -> Triple(
+            bullishAlignment && fastMomentum > config.momentumThreshold -> Triple(
                 SignalResult.BUY,
                 SignalConfidence.MEDIUM,
                 "Strong bullish alignment with accelerating fast EMA (+${String.format("%.2f", fastMomentum * 100)}%)"
             )
 
-            bearishAlignment && fastMomentum < -0.01 -> Triple(
+            bearishAlignment && fastMomentum < -config.momentumThreshold -> Triple(
                 SignalResult.SELL,
                 SignalConfidence.MEDIUM,
                 "Strong bearish alignment with accelerating fast EMA (${String.format("%.2f", fastMomentum * 100)}%)"
             )
 
             // Price above fast EMA in uptrend
-            currentPrice > currentFast && currentFast > currentSlow && trendDistance > 0.05 -> Triple(
+            currentPrice > currentFast && currentFast > currentSlow && trendDistance > config.trendDistanceThreshold -> Triple(
                 SignalResult.BUY,
                 SignalConfidence.MEDIUM,
                 "Price above EMAs with ${String.format("%.1f", trendDistance * 100)}% above trend line"
             )
 
             // Price below fast EMA in downtrend
-            currentPrice < currentFast && currentFast < currentSlow && trendDistance < -0.05 -> Triple(
+            currentPrice < currentFast && currentFast < currentSlow && trendDistance < -config.trendDistanceThreshold -> Triple(
                 SignalResult.SELL,
                 SignalConfidence.MEDIUM,
                 "Price below EMAs with ${String.format("%.1f", abs(trendDistance) * 100)}% below trend line"
             )
 
             // Weak signals - price near moving averages
-            abs(currentPrice - currentFast) / currentFast < 0.02 -> Triple(
+            abs(currentPrice - currentFast) / currentFast < config.priceNearEMAThreshold -> Triple(
                 SignalResult.HOLD,
                 SignalConfidence.LOW,
-                "Price near EMA${fastPeriod} (${
+                "Price near EMA${config.fastPeriod} (${
                     String.format(
                         "%.2f",
                         abs(currentPrice - currentFast) / currentFast * 100
@@ -246,10 +258,11 @@ class MovingAverageSignalGenerator : SignalGenerator, KoinComponent {
                 val target = if (currentFast > currentSlow) {
                     currentPrice + (currentFast - currentSlow) * 2 // Project upward movement
                 } else {
-                    currentFast * 1.03 // 3% above fast EMA
+                    currentFast * config.targetMultiplier // % above fast EMA
                 }
-                // Stop: below slow EMA or 2% below entry
-                val stop = minOf(currentSlow * 0.98, currentPrice * 0.98)
+                // Stop: below slow EMA or % below entry
+                val stopLossMultiplier = 1.0 - config.stopLossPercent
+                val stop = minOf(currentSlow * stopLossMultiplier, currentPrice * stopLossMultiplier)
                 Pair(target, stop)
             }
 
@@ -258,10 +271,11 @@ class MovingAverageSignalGenerator : SignalGenerator, KoinComponent {
                 val target = if (currentFast < currentSlow) {
                     currentPrice - (currentSlow - currentFast) * 2 // Project downward movement
                 } else {
-                    currentFast * 0.97 // 3% below fast EMA
+                    currentFast * (2.0 - config.targetMultiplier) // % below fast EMA
                 }
-                // Stop: above slow EMA or 2% above entry
-                val stop = maxOf(currentSlow * 1.02, currentPrice * 1.02)
+                // Stop: above slow EMA or % above entry
+                val stopLossMultiplier = 1.0 + config.stopLossPercent
+                val stop = maxOf(currentSlow * stopLossMultiplier, currentPrice * stopLossMultiplier)
                 Pair(target, stop)
             }
 
@@ -301,7 +315,7 @@ class MovingAverageSignalGenerator : SignalGenerator, KoinComponent {
 
         if (hasCrossover) baseProbability += 0.20
         if (hasAlignment) baseProbability += 0.15
-        if (abs(momentum) > 0.01) baseProbability += 0.10
+        if (abs(momentum) > config.momentumThreshold) baseProbability += 0.10
 
         return when (result) {
             SignalResult.BUY, SignalResult.SELL -> baseProbability

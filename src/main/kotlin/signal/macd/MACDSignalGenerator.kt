@@ -13,19 +13,29 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 
 /**
+ * Configuration for MACD Signal Generator
+ */
+data class MACDConfig(
+    val fastLength: Int = 12,
+    val slowLength: Int = 26,
+    val signalLength: Int = 9,
+    val stopLossPercent: Double = 0.025, // 2.5%
+    val targetPercent: Double = 0.05,    // 5%
+    val strongMomentumThreshold: Double = 0.1 // 10% of current MACD value
+)
+
+/**
  * Signal generator based on MACD (Moving Average Convergence Divergence) indicator
  * MACD crossovers and momentum changes indicate trend shifts
  */
-class MACDSignalGenerator : SignalGenerator, KoinComponent {
+class MACDSignalGenerator(
+    private val config: MACDConfig = MACDConfig()
+) : SignalGenerator, KoinComponent {
 
     private val marketDataRepository: MarketDataRepository by inject()
 
     override val name: String = "MACD"
     override val priority: Int = 3
-
-    private val fastLength = 12
-    private val slowLength = 26
-    private val signalLength = 9
 
     override suspend fun generateSignal(context: SignalContext): Result<GeneratedSignal> =
         runCatching { analyzeMACDSignal(context) }
@@ -46,9 +56,9 @@ class MACDSignalGenerator : SignalGenerator, KoinComponent {
                 to = Clock.System.now().epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
-                smoothingFastLength = fastLength,
-                smoothingSlowLength = slowLength,
-                smoothingSignal = signalLength
+                smoothingFastLength = config.fastLength,
+                smoothingSlowLength = config.slowLength,
+                smoothingSignal = config.signalLength
             )
         ).getOrThrow()
 
@@ -116,7 +126,7 @@ class MACDSignalGenerator : SignalGenerator, KoinComponent {
 
         val (result, confidence, reasoning) = when {
             // Strong bullish momentum
-            current > 0 && momentum > 0 && abs(momentum) > abs(current) * 0.1 -> Triple(
+            current > 0 && momentum > 0 && abs(momentum) > abs(current) * config.strongMomentumThreshold -> Triple(
                 SignalResult.BUY,
                 SignalConfidence.HIGH,
                 "MACD bullish crossover with strong momentum (+${String.format("%.4f", momentum)})"
@@ -130,7 +140,7 @@ class MACDSignalGenerator : SignalGenerator, KoinComponent {
             )
 
             // Strong bearish momentum
-            current < 0 && momentum < 0 && abs(momentum) > abs(current) * 0.1 -> Triple(
+            current < 0 && momentum < 0 && abs(momentum) > abs(current) * config.strongMomentumThreshold -> Triple(
                 SignalResult.SELL,
                 SignalConfidence.HIGH,
                 "MACD bearish crossover with strong momentum (${String.format("%.4f", momentum)})"
@@ -164,8 +174,8 @@ class MACDSignalGenerator : SignalGenerator, KoinComponent {
         }
 
         val currentPrice = context.currentPrice
-        val stopLossDistance = currentPrice * 0.025 // 2.5% stop loss
-        val targetDistance = currentPrice * 0.05   // 5% target
+        val stopLossDistance = currentPrice * config.stopLossPercent
+        val targetDistance = currentPrice * config.targetPercent
 
         val (targetPrice, stopLossPrice) = when (result) {
             SignalResult.BUY -> Pair(

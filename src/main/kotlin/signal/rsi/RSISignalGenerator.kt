@@ -13,20 +13,33 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 
 /**
+ * Configuration for RSI Signal Generator
+ */
+data class RSIConfig(
+    val rsiPeriod: Int = 14,
+    val overboughtLevel: Double = 70.0,
+    val oversoldLevel: Double = 30.0,
+    val extremeOverboughtLevel: Double = 80.0,
+    val extremeOversoldLevel: Double = 20.0,
+    val neutralLevel: Double = 50.0,
+    val momentumThreshold: Double = 5.0,
+    val stopLossPercent: Double = 0.02, // 2%
+    val targetPercent: Double = 0.04     // 4%
+)
+
+/**
  * Signal generator based on RSI (Relative Strength Index) indicator
  * RSI values above 70 indicate overbought conditions (potential SELL signal)
  * RSI values below 30 indicate oversold conditions (potential BUY signal)
  */
-class RSISignalGenerator : SignalGenerator, KoinComponent {
+class RSISignalGenerator(
+    private val config: RSIConfig = RSIConfig()
+) : SignalGenerator, KoinComponent {
 
     private val marketDataRepository: MarketDataRepository by inject()
 
     override val name: String = "RSI"
     override val priority: Int = 2
-
-    private val rsiPeriod = 14
-    private val overboughtLevel = 70.0
-    private val oversoldLevel = 30.0
 
     override suspend fun generateSignal(context: SignalContext): Result<GeneratedSignal> =
         runCatching { analyzeRSI(context) }
@@ -34,8 +47,8 @@ class RSISignalGenerator : SignalGenerator, KoinComponent {
     private suspend fun analyzeRSI(context: SignalContext): GeneratedSignal {
         // Check if we have enough candle data
         val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
-        if (hourlyCandles == null || hourlyCandles.size < rsiPeriod + 5) {
-            error("Insufficient data for RSI analysis (need at least ${rsiPeriod + 5} hourly candles)")
+        if (hourlyCandles == null || hourlyCandles.size < config.rsiPeriod + 5) {
+            error("Insufficient data for RSI analysis (need at least ${config.rsiPeriod + 5} hourly candles)")
         }
 
         // Get RSI data from technical analysis API
@@ -47,7 +60,7 @@ class RSISignalGenerator : SignalGenerator, KoinComponent {
                 to = Clock.System.now().epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
-                length = rsiPeriod
+                length = config.rsiPeriod
             )
         ).getOrThrow()
 
@@ -101,14 +114,14 @@ class RSISignalGenerator : SignalGenerator, KoinComponent {
     private fun analyzeRSIValue(rsi: Double, rsiTrend: Double, context: SignalContext): GeneratedSignal {
         val (result, confidence, reasoning) = when {
             // Strong oversold conditions
-            rsi <= 20 -> Triple(
+            rsi <= config.extremeOversoldLevel -> Triple(
                 SignalResult.BUY,
                 SignalConfidence.VERY_HIGH,
                 "RSI extremely oversold at ${rsi.toInt()}, strong buy signal"
             )
 
             // Moderate oversold conditions
-            rsi <= oversoldLevel -> {
+            rsi <= config.oversoldLevel -> {
                 val conf = if (rsiTrend > 0) SignalConfidence.HIGH else SignalConfidence.MEDIUM
                 Triple(
                     SignalResult.BUY,
@@ -118,14 +131,14 @@ class RSISignalGenerator : SignalGenerator, KoinComponent {
             }
 
             // Strong overbought conditions
-            rsi >= 80 -> Triple(
+            rsi >= config.extremeOverboughtLevel -> Triple(
                 SignalResult.SELL,
                 SignalConfidence.VERY_HIGH,
                 "RSI extremely overbought at ${rsi.toInt()}, strong sell signal"
             )
 
             // Moderate overbought conditions
-            rsi >= overboughtLevel -> {
+            rsi >= config.overboughtLevel -> {
                 val conf = if (rsiTrend < 0) SignalConfidence.HIGH else SignalConfidence.MEDIUM
                 Triple(
                     SignalResult.SELL,
@@ -135,13 +148,13 @@ class RSISignalGenerator : SignalGenerator, KoinComponent {
             }
 
             // RSI in neutral zone but showing momentum
-            rsi > 50 && rsiTrend > 5 -> Triple(
+            rsi > config.neutralLevel && rsiTrend > config.momentumThreshold -> Triple(
                 SignalResult.BUY,
                 SignalConfidence.LOW,
                 "RSI at ${rsi.toInt()} with bullish momentum (+${rsiTrend.toInt()})"
             )
 
-            rsi < 50 && rsiTrend < -5 -> Triple(
+            rsi < config.neutralLevel && rsiTrend < -config.momentumThreshold -> Triple(
                 SignalResult.SELL,
                 SignalConfidence.LOW,
                 "RSI at ${rsi.toInt()} with bearish momentum (${rsiTrend.toInt()})"
@@ -157,8 +170,8 @@ class RSISignalGenerator : SignalGenerator, KoinComponent {
 
         // Calculate suggested stop loss and target based on RSI levels
         val currentPrice = context.currentPrice
-        val stopLossDistance = currentPrice * 0.02 // 2% stop loss
-        val targetDistance = currentPrice * 0.04 // 4% target (2:1 reward/risk)
+        val stopLossDistance = currentPrice * config.stopLossPercent
+        val targetDistance = currentPrice * config.targetPercent
 
         val (targetPrice, stopLossPrice) = when (result) {
             SignalResult.BUY -> Pair(
@@ -193,15 +206,15 @@ class RSISignalGenerator : SignalGenerator, KoinComponent {
     private fun calculateProbability(rsi: Double, result: SignalResult): Double {
         return when (result) {
             SignalResult.BUY -> when {
-                rsi <= 20 -> 0.85
-                rsi <= 30 -> 0.75
+                rsi <= config.extremeOversoldLevel -> 0.85
+                rsi <= config.oversoldLevel -> 0.75
                 rsi <= 40 -> 0.60
                 else -> 0.50
             }
 
             SignalResult.SELL -> when {
-                rsi >= 80 -> 0.85
-                rsi >= 70 -> 0.75
+                rsi >= config.extremeOverboughtLevel -> 0.85
+                rsi >= config.overboughtLevel -> 0.75
                 rsi >= 60 -> 0.60
                 else -> 0.50
             }

@@ -49,10 +49,10 @@ class SignalBasedTradingApp : KoinComponent {
 
             val initMessage = String()
                 .plus("📈 TRADING SIGNAL GENERATED").plus("\n")
-                .plus("🏢 Instrument: ${targetShare.name} (${targetShare.figi})").plus("\n")
-                .plus("   Market condition: ${signalContext.marketCondition}").plus("\n")
-                .plus("   Volume: ${signalContext.volume}").plus("\n")
-                .plus("   Current price: ${signalContext.currentPrice}").plus("\n")
+                .plus("Instrument: ${targetShare.name} (${targetShare.figi})").plus("\n")
+                .plus("Market condition: ${signalContext.marketCondition}").plus("\n")
+                .plus("Volume: ${signalContext.volume}").plus("\n")
+                .plus("Current price: ${signalContext.currentPrice}").plus("\n")
 
             sendToTelegram(initMessage)
 

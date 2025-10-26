@@ -15,21 +15,37 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 
 /**
+ * Configuration for Bollinger Bands Signal Generator
+ */
+data class BollingerBandsConfig(
+    val period: Int = 20,
+    val standardDeviations: Double = 2.0,
+    val squeezeThreshold: Double = 0.10,     // Band width threshold for squeeze detection (10%)
+    val oversoldThreshold: Double = 0.2,     // %B threshold for oversold (20%)
+    val overboughtThreshold: Double = 0.8,   // %B threshold for overbought (80%)
+    val extremeOversoldThreshold: Double = -0.1, // %B threshold for extreme oversold
+    val extremeOverboughtThreshold: Double = 1.1, // %B threshold for extreme overbought
+    val stopLossBufferPercent: Double = 0.01     // Additional buffer for stop loss (1%)
+)
+
+/**
  * Signal generator based on Bollinger Bands indicator
  * Bollinger Bands help identify overbought/oversold conditions and volatility
  * - Price touching upper band = potential sell signal (overbought)
  * - Price touching lower band = potential buy signal (oversold)
  * - Band squeeze = low volatility, potential breakout coming
  */
-class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
+class BollingerBandsSignalGenerator(
+    private val config: BollingerBandsConfig = BollingerBandsConfig()
+) : SignalGenerator, KoinComponent {
 
     private val marketDataRepository: MarketDataRepository by inject()
 
     override val name: String = "BollingerBands"
     override val priority: Int = 2
 
-    private val period = 20
-    private val standardDeviations = 2.0
+    // Default constructor for Koin compatibility
+    constructor() : this(BollingerBandsConfig())
 
     override suspend fun generateSignal(context: SignalContext): Result<GeneratedSignal> =
         runCatching { analyzeBollingerBands(context) }
@@ -37,8 +53,8 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
     private suspend fun analyzeBollingerBands(context: SignalContext): GeneratedSignal {
         // Check for sufficient data
         val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
-        if (hourlyCandles == null || hourlyCandles.size < period + 5) {
-            error("Insufficient data for Bollinger Bands analysis (need at least ${period + 5} hourly candles)")
+        if (hourlyCandles == null || hourlyCandles.size < config.period + 5) {
+            error("Insufficient data for Bollinger Bands analysis (need at least ${config.period + 5} hourly candles)")
         }
 
         // Try to get Bollinger Bands data from API
@@ -50,8 +66,8 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
                 to = Clock.System.now().epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
-                length = period,
-                deviation = standardDeviations
+                length = config.period,
+                deviation = config.standardDeviations
             )
         ).getOrThrow()
 
@@ -107,8 +123,8 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
         val currentPrice = context.currentPrice
 
         // Estimate bands based on recent price action (simplified)
-        val recentCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]?.takeLast(period)
-        if (recentCandles == null || recentCandles.size < period) {
+        val recentCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]?.takeLast(config.period)
+        if (recentCandles == null || recentCandles.size < config.period) {
             error("Cannot calculate Bollinger Bands without sufficient recent data")
         }
 
@@ -116,8 +132,8 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
         val variance = recentPrices.map { (it - middleBand).pow(2) }.average()
         val stdDev = sqrt(variance)
 
-        val upperBand = middleBand + (standardDeviations * stdDev)
-        val lowerBand = middleBand - (standardDeviations * stdDev)
+        val upperBand = middleBand + (config.standardDeviations * stdDev)
+        val lowerBand = middleBand - (config.standardDeviations * stdDev)
         val percentB = (currentPrice - lowerBand) / (upperBand - lowerBand)
         val bandWidth = (upperBand - lowerBand) / middleBand
 
@@ -134,12 +150,13 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
     ): GeneratedSignal {
 
         // Analyze band squeeze (low volatility)
-        val isSqueezing = bandWidth < 0.10 // Band width less than 10%
+        val isSqueezing = bandWidth < config.squeezeThreshold
 
         val (result, confidence, reasoning) = when {
             // Price below lower band - oversold
             percentB < 0 -> {
-                val conf = if (percentB < -0.1) SignalConfidence.HIGH else SignalConfidence.MEDIUM
+                val conf =
+                    if (percentB < config.extremeOversoldThreshold) SignalConfidence.HIGH else SignalConfidence.MEDIUM
                 Triple(
                     SignalResult.BUY,
                     conf,
@@ -149,7 +166,8 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
 
             // Price above upper band - overbought
             percentB > 1.0 -> {
-                val conf = if (percentB > 1.1) SignalConfidence.HIGH else SignalConfidence.MEDIUM
+                val conf =
+                    if (percentB > config.extremeOverboughtThreshold) SignalConfidence.HIGH else SignalConfidence.MEDIUM
                 Triple(
                     SignalResult.SELL,
                     conf,
@@ -162,16 +180,16 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
                 )
             }
 
-            // Price near lower band (0-20%) - potential buy
-            percentB <= 0.2 -> Triple(
+            // Price near lower band - potential buy
+            percentB <= config.oversoldThreshold -> Triple(
                 SignalResult.BUY,
                 if (isSqueezing) SignalConfidence.HIGH else SignalConfidence.MEDIUM,
                 "Price near lower band (${String.format("%.0f", percentB * 100)}%B)" +
                         if (isSqueezing) " with band squeeze - potential breakout" else ""
             )
 
-            // Price near upper band (80-100%) - potential sell
-            percentB >= 0.8 -> Triple(
+            // Price near upper band - potential sell
+            percentB >= config.overboughtThreshold -> Triple(
                 SignalResult.SELL,
                 if (isSqueezing) SignalConfidence.HIGH else SignalConfidence.MEDIUM,
                 "Price near upper band (${String.format("%.0f", percentB * 100)}%B)" +
@@ -213,7 +231,7 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
                 // Target: middle band or upper band if strong signal
                 val target = if (confidence == SignalConfidence.HIGH) upperBand else middleBand
                 // Stop: below lower band
-                val stop = lowerBand - (currentPrice * 0.01)
+                val stop = lowerBand - (currentPrice * config.stopLossBufferPercent)
                 Pair(target, stop)
             }
 
@@ -221,7 +239,7 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
                 // Target: middle band or lower band if strong signal
                 val target = if (confidence == SignalConfidence.HIGH) lowerBand else middleBand
                 // Stop: above upper band
-                val stop = upperBand + (currentPrice * 0.01)
+                val stop = upperBand + (currentPrice * config.stopLossBufferPercent)
                 Pair(target, stop)
             }
 
@@ -245,18 +263,18 @@ class BollingerBandsSignalGenerator : SignalGenerator, KoinComponent {
     }
 
     private fun calculateBollingerProbability(percentB: Double, bandWidth: Double, result: SignalResult): Double {
-        val squeezeBonus = if (bandWidth < 0.10) 0.15 else 0.0
+        val squeezeBonus = if (bandWidth < config.squeezeThreshold) 0.15 else 0.0
 
         return when (result) {
             SignalResult.BUY -> when {
                 percentB < 0 -> 0.80 + squeezeBonus
-                percentB < 0.2 -> 0.70 + squeezeBonus
+                percentB < config.oversoldThreshold -> 0.70 + squeezeBonus
                 else -> 0.60
             }
 
             SignalResult.SELL -> when {
                 percentB > 1.0 -> 0.80 + squeezeBonus
-                percentB > 0.8 -> 0.70 + squeezeBonus
+                percentB > config.overboughtThreshold -> 0.70 + squeezeBonus
                 else -> 0.60
             }
 

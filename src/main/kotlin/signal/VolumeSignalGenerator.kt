@@ -4,13 +4,31 @@ import ru.pudans.investrobot.models.CandleInterval
 import kotlin.math.abs
 
 /**
+ * Configuration for Volume Signal Generator
+ */
+data class VolumeConfig(
+    val stopLossPercent: Double = 0.02,                // 2% stop loss
+    val targetPercent: Double = 0.03,                  // 3% target
+    val highVolumeThreshold: Double = 1.5,             // Volume ratio threshold for high volume
+    val lowVolumeThreshold: Double = 0.7,              // Volume ratio threshold for low volume
+    val veryHighVolumeThreshold: Double = 2.0,         // Volume ratio threshold for very high volume
+    val suspectLowVolumeThreshold: Double = 0.5,       // Volume ratio threshold for suspiciously low volume
+    val strongPriceChangeThreshold: Double = 0.02,     // 2% price change threshold
+    val moderatePriceChangeThreshold: Double = 0.01,   // 1% price change threshold
+    val significantPriceChangeThreshold: Double = 0.015, // 1.5% price change threshold
+    val minimalPriceChangeThreshold: Double = 0.005    // 0.5% minimal price change threshold
+)
+
+/**
  * Signal generator based on volume analysis
  * Volume confirms price movements and indicates strength of trends
  * - High volume + price increase = strong bullish signal
  * - High volume + price decrease = strong bearish signal
  * - Low volume movements = weak signals, potential reversals
  */
-class VolumeSignalGenerator : SignalGenerator {
+class VolumeSignalGenerator(
+    private val config: VolumeConfig = VolumeConfig()
+) : SignalGenerator {
 
     override val name: String = "Volume"
     override val priority: Int = 1 // Lower priority as volume is confirming indicator
@@ -67,15 +85,15 @@ class VolumeSignalGenerator : SignalGenerator {
 
         // Volume trend analysis
         val volumeTrend = when {
-            volumeRatio > 1.5 -> VolumeTrend.INCREASING
-            volumeRatio < 0.7 -> VolumeTrend.DECREASING
+            volumeRatio > config.highVolumeThreshold -> VolumeTrend.INCREASING
+            volumeRatio < config.lowVolumeThreshold -> VolumeTrend.DECREASING
             else -> VolumeTrend.NEUTRAL
         }
 
         // Analyze volume-price relationship
         val (signal, confidence, reasoning) = when {
             // High volume bullish signals
-            priceChange > 0.02 && volumeRatio > 2.0 -> Triple(
+            priceChange > config.strongPriceChangeThreshold && volumeRatio > config.veryHighVolumeThreshold -> Triple(
                 SignalResult.BUY,
                 SignalConfidence.HIGH,
                 "$timeframe: Strong price increase (+${
@@ -86,7 +104,7 @@ class VolumeSignalGenerator : SignalGenerator {
                 }%) with high volume (${String.format("%.1f", volumeRatio)}x avg)"
             )
 
-            priceChange > 0.01 && volumeRatio > 1.5 -> Triple(
+            priceChange > config.moderatePriceChangeThreshold && volumeRatio > config.highVolumeThreshold -> Triple(
                 SignalResult.BUY,
                 SignalConfidence.MEDIUM,
                 "$timeframe: Price increase (+${
@@ -98,7 +116,7 @@ class VolumeSignalGenerator : SignalGenerator {
             )
 
             // High volume bearish signals
-            priceChange < -0.02 && volumeRatio > 2.0 -> Triple(
+            priceChange < -config.strongPriceChangeThreshold && volumeRatio > config.veryHighVolumeThreshold -> Triple(
                 SignalResult.SELL,
                 SignalConfidence.HIGH,
                 "$timeframe: Strong price decline (${
@@ -109,7 +127,7 @@ class VolumeSignalGenerator : SignalGenerator {
                 }%) with high volume (${String.format("%.1f", volumeRatio)}x avg)"
             )
 
-            priceChange < -0.01 && volumeRatio > 1.5 -> Triple(
+            priceChange < -config.moderatePriceChangeThreshold && volumeRatio > config.highVolumeThreshold -> Triple(
                 SignalResult.SELL,
                 SignalConfidence.MEDIUM,
                 "$timeframe: Price decline (${
@@ -121,7 +139,7 @@ class VolumeSignalGenerator : SignalGenerator {
             )
 
             // Low volume warnings (potential reversals)
-            abs(priceChange) > 0.015 && volumeRatio < 0.5 -> Triple(
+            abs(priceChange) > config.significantPriceChangeThreshold && volumeRatio < config.suspectLowVolumeThreshold -> Triple(
                 SignalResult.WAIT,
                 SignalConfidence.MEDIUM,
                 "$timeframe: Significant price move (${
@@ -133,7 +151,7 @@ class VolumeSignalGenerator : SignalGenerator {
             )
 
             // Volume surge without price movement (accumulation/distribution)
-            abs(priceChange) < 0.005 && volumeRatio > 2.0 -> Triple(
+            abs(priceChange) < config.minimalPriceChangeThreshold && volumeRatio > config.veryHighVolumeThreshold -> Triple(
                 SignalResult.WAIT,
                 SignalConfidence.MEDIUM,
                 "$timeframe: High volume (${
@@ -225,8 +243,8 @@ class VolumeSignalGenerator : SignalGenerator {
         reasoning += ". $volumeTrendDescription"
 
         val currentPrice = context.currentPrice
-        val stopLossDistance = currentPrice * 0.02 // 2% stop loss
-        val targetDistance = currentPrice * 0.03   // 3% target for volume-based signals
+        val stopLossDistance = currentPrice * config.stopLossPercent
+        val targetDistance = currentPrice * config.targetPercent
 
         val (targetPrice, stopLossPrice) = when (finalResult) {
             SignalResult.BUY -> Pair(
@@ -265,9 +283,9 @@ class VolumeSignalGenerator : SignalGenerator {
         // Volume strength factor
         when {
             volumeStrength > 3.0 -> probability += 0.25
-            volumeStrength > 2.0 -> probability += 0.20
-            volumeStrength > 1.5 -> probability += 0.15
-            volumeStrength < 0.5 -> probability -= 0.15
+            volumeStrength > config.veryHighVolumeThreshold -> probability += 0.20
+            volumeStrength > config.highVolumeThreshold -> probability += 0.15
+            volumeStrength < config.suspectLowVolumeThreshold -> probability -= 0.15
         }
 
         // Confirmation factor
