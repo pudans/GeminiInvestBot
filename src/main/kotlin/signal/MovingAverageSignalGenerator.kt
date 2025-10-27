@@ -6,8 +6,8 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import ru.pudans.investrobot.models.*
 import ru.pudans.investrobot.repository.MarketDataRepository
+import ru.pudans.investrobot.tinkoff.currentTime
 import kotlin.math.abs
-import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 
@@ -44,19 +44,19 @@ class MovingAverageSignalGenerator(
         runCatching { analyzeMovingAverages(context) }
 
     private suspend fun analyzeMovingAverages(context: SignalContext): GeneratedSignal {
-        // Check for sufficient data
-        val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
-        if (hourlyCandles == null || hourlyCandles.size < config.trendPeriod + 5) {
-            error("Insufficient data for Moving Average analysis (need at least ${config.trendPeriod + 5} hourly candles)")
-        }
+//        // Check for sufficient data
+//        val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
+//        if (hourlyCandles == null || hourlyCandles.size < (config.trendPeriod + 5)) {
+//            error("Insufficient data for Moving Average analysis (need at least ${(config.trendPeriod + 5)} hourly candles)")
+//        }
 
         // Get multiple EMA data
-        val fastEMA = marketDataRepository.getTechAnalysis(
+        val fastEMAData = marketDataRepository.getTechAnalysis(
             TechAnalysisRequest(
                 indicatorType = IndicatorType.INDICATOR_TYPE_EMA,
                 instrumentUid = context.instrument.uid,
-                from = Clock.System.now().minus(72.hours).epochSeconds,
-                to = Clock.System.now().epochSeconds,
+                from = currentTime.minus(72.hours).epochSeconds,
+                to = currentTime.epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
                 length = config.fastPeriod
@@ -64,12 +64,12 @@ class MovingAverageSignalGenerator(
         ).getOrThrow()
 
         // Get slow EMA
-        val slowEMA = marketDataRepository.getTechAnalysis(
+        val slowEMAData = marketDataRepository.getTechAnalysis(
             TechAnalysisRequest(
                 indicatorType = IndicatorType.INDICATOR_TYPE_EMA,
                 instrumentUid = context.instrument.uid,
-                from = Clock.System.now().minus(72.hours).epochSeconds,
-                to = Clock.System.now().epochSeconds,
+                from = currentTime.minus(72.hours).epochSeconds,
+                to = currentTime.epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
                 length = config.slowPeriod
@@ -77,64 +77,20 @@ class MovingAverageSignalGenerator(
         ).getOrThrow()
 
         // Get trend EMA
-        val trendEMA = marketDataRepository.getTechAnalysis(
+        val trendEMAData = marketDataRepository.getTechAnalysis(
             TechAnalysisRequest(
                 indicatorType = IndicatorType.INDICATOR_TYPE_EMA,
                 instrumentUid = context.instrument.uid,
-                from = Clock.System.now().minus(240.hours).epochSeconds, // Need more data for 200 EMA
-                to = Clock.System.now().epochSeconds,
+                from = currentTime.minus(240.hours).epochSeconds, // Need more data for 200 EMA
+                to = currentTime.epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
                 length = config.trendPeriod
             )
         ).getOrThrow()
 
-        return analyzeEMAData(fastEMA, slowEMA, trendEMA, context)
+        return analyzeEMAData(fastEMAData, slowEMAData, trendEMAData, context)
     }
-
-//    private fun calculateManualEMAs(context: SignalContext, candles: List<ru.pudans.investrobot.models.Candle>): GeneratedSignal {
-//        val prices = candles.map { it.close }
-//
-//        if (prices.size < trendPeriod) {
-//            return GeneratedSignal(
-//                name = name,
-//                result = SignalResult.WAIT,
-//                confidence = SignalConfidence.LOW,
-//                reasoning = "Insufficient price data for Moving Average calculation",
-//                timeframe = CandleInterval.INTERVAL_1_HOUR
-//            )
-//        }
-//
-//        // Calculate EMAs
-//        val fastEMA = calculateEMA(prices, fastPeriod)
-//        val slowEMA = calculateEMA(prices, slowPeriod)
-//        val trendEMA = calculateEMA(prices, trendPeriod)
-//
-//        val currentPrice = context.currentPrice
-//        val currentFast = fastEMA.last()
-//        val currentSlow = slowEMA.last()
-//        val currentTrend = trendEMA.last()
-//
-//        val previousFast = if (fastEMA.size >= 2) fastEMA[fastEMA.size - 2] else currentFast
-//        val previousSlow = if (slowEMA.size >= 2) slowEMA[slowEMA.size - 2] else currentSlow
-//
-//        return analyzeEMAValues(currentPrice, currentFast, currentSlow, currentTrend, previousFast, previousSlow, context)
-//    }
-
-//    private fun calculateEMA(prices: List<Double>, period: Int): List<Double> {
-//        val multiplier = 2.0 / (period + 1)
-//        val ema = mutableListOf<Double>()
-//
-//        // Start with SMA for first value
-//        ema.add(prices.take(period).average())
-//
-//        for (i in period until prices.size) {
-//            val value = (prices[i] * multiplier) + (ema.last() * (1 - multiplier))
-//            ema.add(value)
-//        }
-//
-//        return ema
-//    }
 
     private fun analyzeEMAData(
         fastEMAData: List<TechnicalIndicator>,

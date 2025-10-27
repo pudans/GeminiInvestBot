@@ -7,8 +7,8 @@ import org.koin.core.component.inject
 import ru.pudans.investrobot.models.*
 import ru.pudans.investrobot.repository.MarketDataRepository
 import ru.pudans.investrobot.signal.*
+import ru.pudans.investrobot.tinkoff.currentTime
 import kotlin.math.abs
-import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 
@@ -45,19 +45,19 @@ class RSISignalGenerator(
         runCatching { analyzeRSI(context) }
 
     private suspend fun analyzeRSI(context: SignalContext): GeneratedSignal {
-        // Check if we have enough candle data
-        val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
-        if (hourlyCandles == null || hourlyCandles.size < config.rsiPeriod + 5) {
-            error("Insufficient data for RSI analysis (need at least ${config.rsiPeriod + 5} hourly candles)")
-        }
+//        // Check if we have enough candle data
+//        val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
+//        if (hourlyCandles == null || hourlyCandles.size < config.rsiPeriod + 5) {
+//            error("Insufficient data for RSI analysis (need at least ${config.rsiPeriod + 5} hourly candles)")
+//        }
 
         // Get RSI data from technical analysis API
         val rsiData = marketDataRepository.getTechAnalysis(
             request = TechAnalysisRequest(
                 indicatorType = IndicatorType.INDICATOR_TYPE_RSI,
                 instrumentUid = context.instrument.uid,
-                from = Clock.System.now().minus(48.hours).epochSeconds,
-                to = Clock.System.now().epochSeconds,
+                from = currentTime.minus(48.hours).epochSeconds,
+                to = currentTime.epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
                 length = config.rsiPeriod

@@ -1,6 +1,5 @@
 package ru.pudans.investrobot.signal
 
-import ru.pudans.investrobot.models.Candle
 import ru.pudans.investrobot.models.CandleInterval
 import ru.pudans.investrobot.models.Instrument
 
@@ -20,7 +19,6 @@ enum class SignalConfidence {
 
 data class SignalContext(
     val instrument: Instrument,
-    val multiTimeframeCandles: Map<CandleInterval, List<Candle>>,
     val currentPrice: Double,
     val volume: Long,
     val marketCondition: MarketCondition? = null

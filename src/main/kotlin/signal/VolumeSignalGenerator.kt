@@ -1,7 +1,17 @@
+@file:OptIn(ExperimentalTime::class)
+
 package ru.pudans.investrobot.signal
 
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+import ru.pudans.investrobot.models.Candle
 import ru.pudans.investrobot.models.CandleInterval
+import ru.pudans.investrobot.repository.MarketDataRepository
+import ru.pudans.investrobot.tinkoff.currentTime
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.ExperimentalTime
 
 /**
  * Configuration for Volume Signal Generator
@@ -28,7 +38,9 @@ data class VolumeConfig(
  */
 class VolumeSignalGenerator(
     private val config: VolumeConfig = VolumeConfig()
-) : SignalGenerator {
+) : SignalGenerator, KoinComponent {
+
+    private val marketDataRepository: MarketDataRepository by inject()
 
     override val name: String = "Volume"
     override val priority: Int = 1 // Lower priority as volume is confirming indicator
@@ -36,13 +48,30 @@ class VolumeSignalGenerator(
     override suspend fun generateSignal(context: SignalContext): Result<GeneratedSignal> =
         runCatching { analyzeVolumePatterns(context) }
 
-    private fun analyzeVolumePatterns(context: SignalContext): GeneratedSignal {
+    private suspend fun analyzeVolumePatterns(context: SignalContext): GeneratedSignal {
         // Analyze multiple timeframes for volume confirmation
-        val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
-        val fifteenMinCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_15_MIN]
-        val fiveMinCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_5_MIN]
+        val hourlyCandles = marketDataRepository.getCandles(
+            instrumentId = context.instrument.uid,
+            startTime = currentTime.minus(24.hours),
+            endTime = currentTime,
+            interval = CandleInterval.INTERVAL_1_HOUR
+        ).getOrThrow()
 
-        if (hourlyCandles == null || hourlyCandles.size < 10) {
+        val fifteenMinCandles = marketDataRepository.getCandles(
+            instrumentId = context.instrument.uid,
+            startTime = currentTime.minus(450.minutes),
+            endTime = currentTime,
+            interval = CandleInterval.INTERVAL_15_MIN
+        ).getOrThrow()
+
+        val fiveMinCandles = marketDataRepository.getCandles(
+            instrumentId = context.instrument.uid,
+            startTime = currentTime.minus(150.minutes),
+            endTime = currentTime,
+            interval = CandleInterval.INTERVAL_5_MIN
+        ).getOrThrow()
+
+        if (hourlyCandles.size < 10) {
             error("Insufficient volume data for analysis (need at least 10 hourly candles)")
         }
 
@@ -50,11 +79,11 @@ class VolumeSignalGenerator(
         val hourlyAnalysis = analyzeTimeframeVolume(hourlyCandles, "1H")
 
         // Analyze shorter timeframes for confirmation
-        val fifteenMinAnalysis = if (fifteenMinCandles != null && fifteenMinCandles.size >= 5) {
+        val fifteenMinAnalysis = if (fifteenMinCandles.size >= 5) {
             analyzeTimeframeVolume(fifteenMinCandles.takeLast(5), "15M")
         } else null
 
-        val fiveMinAnalysis = if (fiveMinCandles != null && fiveMinCandles.size >= 5) {
+        val fiveMinAnalysis = if (fiveMinCandles.size >= 5) {
             analyzeTimeframeVolume(fiveMinCandles.takeLast(5), "5M")
         } else null
 
@@ -62,7 +91,7 @@ class VolumeSignalGenerator(
     }
 
     private fun analyzeTimeframeVolume(
-        candles: List<ru.pudans.investrobot.models.Candle>,
+        candles: List<Candle>,
         timeframe: String
     ): VolumeAnalysis {
         if (candles.size < 3) {

@@ -7,10 +7,10 @@ import org.koin.core.component.inject
 import ru.pudans.investrobot.models.*
 import ru.pudans.investrobot.repository.MarketDataRepository
 import ru.pudans.investrobot.signal.*
+import ru.pudans.investrobot.tinkoff.currentTime
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
-import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 
@@ -44,26 +44,23 @@ class BollingerBandsSignalGenerator(
     override val name: String = "BollingerBands"
     override val priority: Int = 2
 
-    // Default constructor for Koin compatibility
-    constructor() : this(BollingerBandsConfig())
-
     override suspend fun generateSignal(context: SignalContext): Result<GeneratedSignal> =
         runCatching { analyzeBollingerBands(context) }
 
     private suspend fun analyzeBollingerBands(context: SignalContext): GeneratedSignal {
-        // Check for sufficient data
-        val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
-        if (hourlyCandles == null || hourlyCandles.size < config.period + 5) {
-            error("Insufficient data for Bollinger Bands analysis (need at least ${config.period + 5} hourly candles)")
-        }
+//        // Check for sufficient data
+//        val hourlyCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]
+//        if (hourlyCandles == null || hourlyCandles.size < (config.period + 5)) {
+//            error("Insufficient data for Bollinger Bands analysis (need at least ${(config.period + 5)} hourly candles)")
+//        }
 
         // Try to get Bollinger Bands data from API
         val bollingerData = marketDataRepository.getTechAnalysis(
             request = TechAnalysisRequest(
                 indicatorType = IndicatorType.INDICATOR_TYPE_BB,
                 instrumentUid = context.instrument.uid,
-                from = Clock.System.now().minus(48.hours).epochSeconds,
-                to = Clock.System.now().epochSeconds,
+                from = currentTime.minus(48.hours).epochSeconds,
+                to = currentTime.epochSeconds,
                 interval = IndicatorInterval.INDICATOR_INTERVAL_ONE_HOUR,
                 typeOfPrice = TypeOfPrice.TYPE_OF_PRICE_CLOSE,
                 length = config.period,
@@ -78,44 +75,10 @@ class BollingerBandsSignalGenerator(
         return analyzeBollingerData(bollingerData, context)
     }
 
-//    private fun calculateManualBollingerBands(context: SignalContext, candles: List<ru.pudans.investrobot.models.Candle>): GeneratedSignal {
-//        val prices = candles.map { it.close }
-//
-//        if (prices.size < period) {
-//            return GeneratedSignal(
-//                name = name,
-//                result = SignalResult.WAIT,
-//                confidence = SignalConfidence.LOW,
-//                reasoning = "Insufficient price data for Bollinger Bands calculation",
-//                timeframe = CandleInterval.INTERVAL_1_HOUR
-//            )
-//        }
-//
-//        // Calculate recent period for analysis
-//        val recentPrices = prices.takeLast(period)
-//        val currentPrice = context.currentPrice
-//
-//        // Calculate middle band (SMA)
-//        val middleBand = recentPrices.average()
-//
-//        // Calculate standard deviation
-//        val variance = recentPrices.map { (it - middleBand).pow(2) }.average()
-//        val stdDev = sqrt(variance)
-//
-//        // Calculate upper and lower bands
-//        val upperBand = middleBand + (standardDeviations * stdDev)
-//        val lowerBand = middleBand - (standardDeviations * stdDev)
-//
-//        // Calculate band width (volatility indicator)
-//        val bandWidth = (upperBand - lowerBand) / middleBand
-//
-//        // Calculate %B (position within bands)
-//        val percentB = (currentPrice - lowerBand) / (upperBand - lowerBand)
-//
-//        return analyzeBollingerValues(currentPrice, upperBand, middleBand, lowerBand, percentB, bandWidth, context)
-//    }
-
-    private fun analyzeBollingerData(bollingerData: List<TechnicalIndicator>, context: SignalContext): GeneratedSignal {
+    private suspend fun analyzeBollingerData(
+        bollingerData: List<TechnicalIndicator>,
+        context: SignalContext
+    ): GeneratedSignal {
         // Note: In real implementation, you'd need separate API calls for upper, middle, and lower bands
         // This is simplified assuming the API returns middle band values
 
@@ -123,8 +86,14 @@ class BollingerBandsSignalGenerator(
         val currentPrice = context.currentPrice
 
         // Estimate bands based on recent price action (simplified)
-        val recentCandles = context.multiTimeframeCandles[CandleInterval.INTERVAL_1_HOUR]?.takeLast(config.period)
-        if (recentCandles == null || recentCandles.size < config.period) {
+        val recentCandles = marketDataRepository.getCandles(
+            instrumentId = context.instrument.uid,
+            startTime = currentTime.minus(32.hours),
+            endTime = currentTime,
+            interval = CandleInterval.INTERVAL_1_HOUR
+        ).getOrThrow()
+
+        if (recentCandles.size < config.period) {
             error("Cannot calculate Bollinger Bands without sufficient recent data")
         }
 
